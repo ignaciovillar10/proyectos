@@ -21,6 +21,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cartOpen, setCartOpen] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [sessionId] = useState(() => 'session_' + Math.random().toString(36).substr(2, 9));
 
   // Fetch products on component mount
