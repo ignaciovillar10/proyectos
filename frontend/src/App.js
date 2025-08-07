@@ -187,6 +187,16 @@ function App() {
                 <span>Free Shipping</span>
               </div>
               
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowAdmin(true)}
+                className="text-slate-600 hover:text-slate-900"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+              
               <Sheet open={cartOpen} onOpenChange={setCartOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" className="relative">
