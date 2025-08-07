@@ -147,6 +147,159 @@ async def startup_event():
 async def health_check():
     return {"status": "healthy", "service": "EcommercePro API"}
 
+# Admin Dashboard Stats
+@app.get("/api/admin/stats")
+async def get_admin_stats():
+    try:
+        # Get basic statistics
+        total_products = products_collection.count_documents({})
+        total_orders = orders_collection.count_documents({})
+        total_revenue = 0
+        
+        # Calculate total revenue from orders
+        orders = list(orders_collection.find({"status": "paid"}))
+        if orders:
+            total_revenue = sum(order.get("total", 0) for order in orders)
+        
+        # Get low stock products
+        low_stock_products = list(products_collection.find({"stock": {"$lt": 10}}, {"_id": 0}))
+        
+        # Get recent orders
+        recent_orders = list(orders_collection.find({}, {"_id": 0}).sort("created_at", -1).limit(5))
+        
+        # Category distribution
+        pipeline = [
+            {"$group": {"_id": "$category", "count": {"$sum": 1}}},
+            {"$project": {"category": "$_id", "count": 1, "_id": 0}}
+        ]
+        category_stats = list(products_collection.aggregate(pipeline))
+        
+        return {
+            "total_products": total_products,
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "low_stock_products": low_stock_products,
+            "recent_orders": recent_orders,
+            "category_stats": category_stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching stats: {str(e)}")
+
+# Admin Product Management
+@app.post("/api/admin/products", response_model=Product)
+async def create_product(product_data: dict):
+    try:
+        new_product = {
+            "id": str(uuid.uuid4()),
+            "name": product_data.get("name"),
+            "description": product_data.get("description"),
+            "price": float(product_data.get("price")),
+            "category": product_data.get("category"),
+            "image_url": product_data.get("image_url"),
+            "stock": int(product_data.get("stock")),
+            "featured": product_data.get("featured", False)
+        }
+        
+        products_collection.insert_one(new_product)
+        return new_product
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating product: {str(e)}")
+
+@app.put("/api/admin/products/{product_id}", response_model=Product)
+async def update_product(product_id: str, product_data: dict):
+    try:
+        updated_product = {
+            "name": product_data.get("name"),
+            "description": product_data.get("description"),
+            "price": float(product_data.get("price")),
+            "category": product_data.get("category"),
+            "image_url": product_data.get("image_url"),
+            "stock": int(product_data.get("stock")),
+            "featured": product_data.get("featured", False)
+        }
+        
+        result = products_collection.update_one(
+            {"id": product_id},
+            {"$set": updated_product}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Return updated product
+        updated = products_collection.find_one({"id": product_id}, {"_id": 0})
+        return updated
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating product: {str(e)}")
+
+@app.delete("/api/admin/products/{product_id}")
+async def delete_product(product_id: str):
+    try:
+        result = products_collection.delete_one({"id": product_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        return {"message": "Product deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting product: {str(e)}")
+
+# Order Management
+@app.get("/api/admin/orders")
+async def get_all_orders():
+    try:
+        orders = list(orders_collection.find({}, {"_id": 0}).sort("created_at", -1))
+        return orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching orders: {str(e)}")
+
+@app.put("/api/admin/orders/{order_id}/status")
+async def update_order_status(order_id: str, status_data: dict):
+    try:
+        new_status = status_data.get("status")
+        if new_status not in ["pending", "paid", "shipped", "delivered", "cancelled"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        result = orders_collection.update_one(
+            {"id": order_id},
+            {"$set": {"status": new_status}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        return {"message": "Order status updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating order status: {str(e)}")
+
+# Create sample order for demo
+@app.post("/api/create-sample-order")
+async def create_sample_order():
+    try:
+        sample_order = {
+            "id": str(uuid.uuid4()),
+            "user_id": None,
+            "session_id": "demo_session",
+            "items": [
+                {"product_id": "sample", "quantity": 2, "price": 299.99}
+            ],
+            "total": 599.98,
+            "status": "paid",
+            "payment_intent_id": "pi_demo_123",
+            "shipping_address": {
+                "name": "Demo Customer",
+                "address": "123 Demo Street",
+                "city": "Demo City",
+                "postal_code": "12345",
+                "country": "US"
+            },
+            "created_at": datetime.now()
+        }
+        
+        orders_collection.insert_one(sample_order)
+        return {"message": "Sample order created", "order": sample_order}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating sample order: {str(e)}")
+
 @app.get("/api/products", response_model=List[Product])
 async def get_products(category: Optional[str] = None, featured: Optional[bool] = None):
     query = {}
