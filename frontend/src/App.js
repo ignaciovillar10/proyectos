@@ -147,6 +147,10 @@ function App() {
     return cart.items?.reduce((total, item) => total + item.quantity, 0) || 0;
   };
 
+  if (showAdmin) {
+    return <AdminPanel onBackToStore={() => setShowAdmin(false)} />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
