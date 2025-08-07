@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Filter, Star, Plus, Minus, X, Package, Truck, Shield } from 'lucide-react';
+import { ShoppingCart, Search, Filter, Star, Plus, Minus, X, Package, Truck, Shield, Settings } from 'lucide-react';
 import { Button } from './components/ui/button';
+import AdminPanel from './components/AdminPanel';
 import { Input } from './components/ui/input';
 import { Badge } from './components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './components/ui/card';
